@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const App = () => {
   const [angle, setAngle] = useState(0);
+  const [status, setStatus] = useState('Idle');
+  const [timeoutId, setTimeoutId] = useState(null);
 
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => true,
@@ -13,6 +15,30 @@ const App = () => {
       setAngle(newAngle);
     }
   });
+
+  useEffect(() => {
+    if (status === 'Stopped') {
+      const id = setTimeout(() => {
+        setStatus('Idle');
+      }, 10000);
+      setTimeoutId(id);
+    } else if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }, [status]);
+
+  const handleRecord = () => {
+    setStatus('Recording...');
+  };
+
+  const handleStop = () => {
+    setStatus('Stopped');
+  };
+
+  const handlePlay = () => {
+    setStatus('Playing...');
+  };
+
 
   return (
     <View style={styles.container}>
@@ -27,16 +53,16 @@ const App = () => {
         <View style={[styles.line, styles.line2]} />
       </View>
       <View style={styles.screen}>
-        <Text style={styles.screenText}>System Info</Text>
+        <Text style={styles.screenText}>{status}</Text>
       </View>
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.button} onPress={() => {}}>
+        <TouchableOpacity style={styles.button} onPress={handleRecord}>
           <Icon name="fiber-manual-record" size={30} color="red" style={styles.icon} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => {}}>
+        <TouchableOpacity style={styles.button} onPress={handlePlay}>
           <Icon name="play-arrow" size={30} color="black" style={styles.icon} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => {}}>
+        <TouchableOpacity style={styles.button} onPress={handleStop}>
           <Icon name="stop" size={30} color="black" style={styles.icon} />
         </TouchableOpacity>
       </View>
