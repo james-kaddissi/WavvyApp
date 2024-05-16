@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const App = () => {
   const [angle, setAngle] = useState(0);
@@ -16,7 +17,12 @@ const App = () => {
   return (
     <View style={styles.container}>
       <View {...panResponder.panHandlers} style={[styles.wheel, { transform: [{ rotate: `${angle}deg` }] }]}>
-        <View style={styles.innerCircle} />
+        <LinearGradient
+          colors={['#d1d1d1', '#a7a7a7', '#c7c7c7']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.innerCircle}
+        />
         <View style={[styles.line, styles.line1]} />
         <View style={[styles.line, styles.line2]} />
       </View>
@@ -59,14 +65,12 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'gray',
   },
   line: {
     position: 'absolute',
     width: 1,
     height: 115,
     backgroundColor: 'gray',
-    
   },
   line1: {
     top: 5,
@@ -89,7 +93,7 @@ const styles = StyleSheet.create({
   },
   screenText: {
     color: 'white',
-    fontFamily: 'Courier', 
+    fontFamily: 'Courier',
     fontSize: 14,
   },
   buttonRow: {
@@ -113,7 +117,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   icon: {
-    marginTop: 10, 
+    marginTop: 10,
   },
 });
 
