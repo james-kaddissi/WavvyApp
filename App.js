@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, PanResponder } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const App = () => {
@@ -20,6 +20,9 @@ const App = () => {
         <View style={[styles.line, styles.line1]} />
         <View style={[styles.line, styles.line2]} />
       </View>
+      <View style={styles.screen}>
+        <Text style={styles.screenText}>System Info</Text>
+      </View>
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.button} onPress={() => {}}>
           <Icon name="fiber-manual-record" size={30} color="red" style={styles.icon} />
@@ -34,7 +37,6 @@ const App = () => {
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -73,6 +75,22 @@ const styles = StyleSheet.create({
   line2: {
     bottom: 5,
     transform: [{ rotate: '180deg' }],
+  },
+  screen: {
+    position: 'absolute',
+    top: 100,
+    right: 30,
+    width: 140,
+    height: 80,
+    borderRadius: 10,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  screenText: {
+    color: 'white',
+    fontFamily: 'Courier', 
+    fontSize: 14,
   },
   buttonRow: {
     flexDirection: 'row',
