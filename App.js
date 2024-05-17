@@ -17,7 +17,7 @@ const App = () => {
     onPanResponderMove: (e, gestureState) => {
       const newAngle = angle + gestureState.dx / 2;
       setAngle(newAngle);
-    }
+    },
   });
 
   useEffect(() => {
@@ -40,6 +40,10 @@ const App = () => {
   }, [sound]);
 
   const handleRecord = async () => {
+    if (status === 'Playing...') {
+      await handleStop();
+    }
+
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status === 'granted') {
@@ -71,9 +75,19 @@ const App = () => {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       console.log('Recording saved at', uri);
+      setStatus('Stopped');
       setRecordingUri(uri);
       setRecording(null);
       return uri;
+    }
+    if (status === 'Playing...') {
+      if (sound) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+        setSound(null);
+      }
+      setStatus('Stopped');
+      return recordingUri;
     }
     return null;
   };
@@ -84,7 +98,6 @@ const App = () => {
     if (status === 'Recording...') {
       setStatus('Stopping...');
       uri = await handleStop();
-      setStatus('Stopped');
     }
 
     if (uri) {
@@ -93,7 +106,7 @@ const App = () => {
         await sound.unloadAsync();
         setSound(null);
       }
-      const { sound } = await Audio.Sound.createAsync(
+      const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: uri },
         { shouldPlay: true },
         (status) => {
@@ -102,8 +115,8 @@ const App = () => {
           }
         }
       );
-      setSound(sound);
-      await sound.playAsync();
+      setSound(newSound);
+      await newSound.playAsync();
     } else {
       console.log('No recording available to play');
     }
@@ -131,7 +144,7 @@ const App = () => {
         <TouchableOpacity style={styles.button} onPress={handlePlay}>
           <Icon name="play-arrow" size={30} color="black" style={styles.icon} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleStop} disabled={status !== 'Recording...'}>
+        <TouchableOpacity style={styles.button} onPress={handleStop} disabled={status === 'Idle' || status === 'Stopped'}>
           <Icon name="stop" size={30} color="black" style={styles.icon} />
         </TouchableOpacity>
       </View>
