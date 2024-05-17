@@ -67,25 +67,34 @@ const App = () => {
   };
 
   const handleStop = async () => {
-    setStatus('Stopped');
     if (recording) {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       console.log('Recording saved at', uri);
       setRecordingUri(uri);
       setRecording(null);
+      return uri;
     }
+    return null;
   };
 
   const handlePlay = async () => {
-    setStatus('Playing...');
-    if (sound) {
-      await sound.unloadAsync();
-      setSound(null);
+    let uri = recordingUri;
+
+    if (status === 'Recording...') {
+      setStatus('Stopping...');
+      uri = await handleStop();
+      setStatus('Stopped');
     }
-    if (recordingUri) {
+
+    if (uri) {
+      setStatus('Playing...');
+      if (sound) {
+        await sound.unloadAsync();
+        setSound(null);
+      }
       const { sound } = await Audio.Sound.createAsync(
-        { uri: recordingUri },
+        { uri: uri },
         { shouldPlay: true },
         (status) => {
           if (status.didJustFinish) {
@@ -95,6 +104,8 @@ const App = () => {
       );
       setSound(sound);
       await sound.playAsync();
+    } else {
+      console.log('No recording available to play');
     }
   };
 
@@ -120,7 +131,7 @@ const App = () => {
         <TouchableOpacity style={styles.button} onPress={handlePlay}>
           <Icon name="play-arrow" size={30} color="black" style={styles.icon} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleStop}>
+        <TouchableOpacity style={styles.button} onPress={handleStop} disabled={status !== 'Recording...'}>
           <Icon name="stop" size={30} color="black" style={styles.icon} />
         </TouchableOpacity>
       </View>
