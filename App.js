@@ -1,22 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, PanResponder } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, PanResponder, Animated, Easing } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 
 const App = () => {
-  const [angle, setAngle] = useState(0);
   const [status, setStatus] = useState('Idle');
   const [timeoutId, setTimeoutId] = useState(null);
   const [recording, setRecording] = useState(null);
   const [sound, setSound] = useState(null);
   const [recordingUri, setRecordingUri] = useState(null);
+  const rotation = useRef(new Animated.Value(0)).current;
+  const [angleOffset, setAngleOffset] = useState(0);
 
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => {
+      if (status === 'Recording...' || status === 'Playing...') {
+        stopRotation();
+      }
+    },
     onPanResponderMove: (e, gestureState) => {
-      const newAngle = angle + gestureState.dx / 2;
-      setAngle(newAngle);
+      const newAngle = angleOffset + gestureState.dx / 2;
+      rotation.setValue(newAngle);
+    },
+    onPanResponderRelease: (e, gestureState) => {
+      setAngleOffset(angleOffset + gestureState.dx / 2);
+      if (status === 'Recording...' || status === 'Playing...') {
+        startRotation();
+      }
     },
   });
 
@@ -38,6 +50,31 @@ const App = () => {
         }
       : undefined;
   }, [sound]);
+
+  useEffect(() => {
+    if (status === 'Recording...' || status === 'Playing...') {
+      startRotation();
+    } else {
+      stopRotation();
+    }
+  }, [status]);
+
+  const startRotation = () => {
+    Animated.loop(
+      Animated.timing(rotation, {
+        toValue: angleOffset + 360,
+        duration: 6000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  };
+
+  const stopRotation = () => {
+    rotation.stopAnimation((value) => {
+      setAngleOffset(value % 360);
+    });
+  };
 
   const handleRecord = async () => {
     if (status === 'Playing...') {
@@ -122,9 +159,22 @@ const App = () => {
     }
   };
 
+  const combinedRotation = rotation.interpolate({
+    inputRange: [-360, 360],
+    outputRange: ['-360deg', '360deg'],
+  });
+
   return (
     <View style={styles.container}>
-      <View {...panResponder.panHandlers} style={[styles.wheel, { transform: [{ rotate: `${angle}deg` }] }]}>
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[
+          styles.wheel,
+          {
+            transform: [{ rotate: combinedRotation }],
+          },
+        ]}
+      >
         <LinearGradient
           colors={['#d1d1d1', '#a7a7a7', '#c7c7c7']}
           start={{ x: 0, y: 0 }}
@@ -133,7 +183,7 @@ const App = () => {
         />
         <View style={[styles.line, styles.line1]} />
         <View style={[styles.line, styles.line2]} />
-      </View>
+      </Animated.View>
       <View style={styles.screen}>
         <Text style={styles.screenText}>{status}</Text>
       </View>
