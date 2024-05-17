@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, PanResponder } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 
 const App = () => {
   const [angle, setAngle] = useState(0);
   const [status, setStatus] = useState('Idle');
   const [timeoutId, setTimeoutId] = useState(null);
+  const [recording, setRecording] = useState(null);
+  const [sound, setSound] = useState(null);
+  const [recordingUri, setRecordingUri] = useState(null);
 
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => true,
@@ -27,18 +31,72 @@ const App = () => {
     }
   }, [status]);
 
-  const handleRecord = () => {
-    setStatus('Recording...');
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
+  const handleRecord = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status === 'granted') {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+          playsInSilentModeIOS: true,
+          interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+          shouldDuckAndroid: true,
+          staysActiveInBackground: true,
+          playThroughEarpieceAndroid: true,
+        });
+
+        setStatus('Recording...');
+        const { recording } = await Audio.Recording.createAsync(
+          Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+        );
+        setRecording(recording);
+      } else {
+        console.log('Permission to access microphone is required!');
+      }
+    } catch (error) {
+      console.error('Failed to start recording', error);
+    }
   };
 
-  const handleStop = () => {
+  const handleStop = async () => {
     setStatus('Stopped');
+    if (recording) {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      console.log('Recording saved at', uri);
+      setRecordingUri(uri);
+      setRecording(null);
+    }
   };
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
     setStatus('Playing...');
+    if (sound) {
+      await sound.unloadAsync();
+      setSound(null);
+    }
+    if (recordingUri) {
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: recordingUri },
+        { shouldPlay: true },
+        (status) => {
+          if (status.didJustFinish) {
+            setStatus('Idle');
+          }
+        }
+      );
+      setSound(sound);
+      await sound.playAsync();
+    }
   };
-
 
   return (
     <View style={styles.container}>
