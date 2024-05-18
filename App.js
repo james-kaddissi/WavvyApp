@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, PanResponder, Animated, Easing } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, PanResponder, Animated, Easing, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
@@ -10,8 +10,11 @@ const App = () => {
   const [recording, setRecording] = useState(null);
   const [sound, setSound] = useState(null);
   const [recordingUri, setRecordingUri] = useState(null);
+  const [sliderValue, setSliderValue] = useState(0);
   const rotation = useRef(new Animated.Value(0)).current;
   const [angleOffset, setAngleOffset] = useState(0);
+
+  const sliderHeight = 300;
 
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => true,
@@ -159,9 +162,21 @@ const App = () => {
     }
   };
 
+  const handleSlider = (e, gestureState) => {
+    const positionY = gestureState.moveY - (Dimensions.get('window').height - sliderHeight) / 2;
+    const value = 1 - (2 * positionY) / sliderHeight;
+    setSliderValue(Math.max(-1, Math.min(1, value)));
+  };
+
   const combinedRotation = rotation.interpolate({
     inputRange: [-360, 360],
     outputRange: ['-360deg', '360deg'],
+  });
+
+  const sliderResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderMove: handleSlider,
+    onPanResponderGrant: handleSlider,
   });
 
   return (
@@ -184,6 +199,18 @@ const App = () => {
         <View style={[styles.line, styles.line1]} />
         <View style={[styles.line, styles.line2]} />
       </Animated.View>
+      <View style={styles.sidebarContainer}>
+        <View style={styles.sidebar} {...sliderResponder.panHandlers}>
+          <View style={styles.symbolTop}>
+            <Icon name="play-arrow" size={20} color="white" />
+            <Icon name="play-arrow" size={20} color="white" style={{ marginLeft: -10 }}/>
+          </View>
+          <View style={styles.symbolBottom}>
+            <Icon name="play-arrow" size={20} color="white" />
+            <Text style={styles.reverseText}>R</Text>
+          </View>
+        </View>
+      </View>
       <View style={styles.screen}>
         <Text style={styles.screenText}>{status}</Text>
       </View>
@@ -237,6 +264,49 @@ const styles = StyleSheet.create({
   line2: {
     bottom: 5,
     transform: [{ rotate: '180deg' }],
+  },
+  sidebarContainer: {
+    position: 'absolute',
+    left: 0,
+    top: 100,
+    width: 15,
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#C7C7C7',
+  },
+  sidebar: {
+    width: '100%',
+    top: 150,
+    height: '100%',
+    backgroundColor: '#C7C7C7',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: '#000',
+    borderRadius: 5,
+    paddingVertical: 10,
+  },
+  symbolTop: {
+    flexDirection: 'row', 
+    position: 'absolute',
+    left: 20,
+    transform: [{rotate: '270deg'}]
+    
+  },
+  symbolBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'absolute',
+    left: 20,
+    bottom: 0,
+    transform: [{rotate: '90deg'}],
+  },
+  reverseText: {
+    color: 'white',
+    fontSize: 15,
+    marginRight: 5,
+    transform: [{rotate: '180deg'}],
   },
   screen: {
     position: 'absolute',
