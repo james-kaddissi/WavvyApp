@@ -13,6 +13,7 @@ const App = () => {
   const [sliderValue, setSliderValue] = useState(0);
   const rotation = useRef(new Animated.Value(0)).current;
   const [angleOffset, setAngleOffset] = useState(0);
+  const currentVelocity = useRef(0);
 
   const sliderHeight = 300;
 
@@ -168,6 +169,23 @@ const App = () => {
     setSliderValue(Math.max(-1, Math.min(1, value)));
   };
 
+  useEffect(() => {
+    let animationFrame;
+    const updateRotation = () => {
+      currentVelocity.current += sliderValue * 0.05; // Adjust multiplier for sensitivity
+      rotation.setValue(currentVelocity.current * 360);
+      animationFrame = requestAnimationFrame(updateRotation);
+    };
+
+    if (sliderValue !== 0) {
+      animationFrame = requestAnimationFrame(updateRotation);
+    } else {
+      cancelAnimationFrame(animationFrame);
+    }
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [sliderValue]);
+
   const combinedRotation = rotation.interpolate({
     inputRange: [-360, 360],
     outputRange: ['-360deg', '360deg'],
@@ -177,6 +195,12 @@ const App = () => {
     onMoveShouldSetPanResponder: () => true,
     onPanResponderMove: handleSlider,
     onPanResponderGrant: handleSlider,
+    onPanResponderRelease: () => {
+      if (status === 'Recording...' || status === 'Playing...') {
+        startRotation();
+      }
+      setSliderValue(0);
+    },
   });
 
   return (
@@ -203,7 +227,7 @@ const App = () => {
         <View style={styles.sidebar} {...sliderResponder.panHandlers}>
           <View style={styles.symbolTop}>
             <Icon name="play-arrow" size={20} color="white" />
-            <Icon name="play-arrow" size={20} color="white" style={{ marginLeft: -10 }}/>
+            <Icon name="play-arrow" size={20} color="white" style={{ marginLeft: -10 }} />
           </View>
           <View style={styles.symbolBottom}>
             <Icon name="play-arrow" size={20} color="white" />
@@ -288,11 +312,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   symbolTop: {
-    flexDirection: 'row', 
+    flexDirection: 'row',
     position: 'absolute',
     left: 20,
-    transform: [{rotate: '270deg'}]
-    
+    transform: [{ rotate: '270deg' }]
   },
   symbolBottom: {
     flexDirection: 'row',
@@ -300,13 +323,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     bottom: 0,
-    transform: [{rotate: '90deg'}],
+    transform: [{ rotate: '90deg' }],
   },
   reverseText: {
     color: 'white',
     fontSize: 15,
     marginRight: 5,
-    transform: [{rotate: '180deg'}],
+    transform: [{ rotate: '180deg' }],
   },
   screen: {
     position: 'absolute',
