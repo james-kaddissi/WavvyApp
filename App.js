@@ -172,7 +172,7 @@ const App = () => {
   useEffect(() => {
     let animationFrame;
     const updateRotation = () => {
-      currentVelocity.current += sliderValue * 0.05; // Adjust multiplier for sensitivity
+      currentVelocity.current += sliderValue * 0.055; 
       rotation.setValue(currentVelocity.current * 360);
       animationFrame = requestAnimationFrame(updateRotation);
     };
@@ -239,6 +239,9 @@ const App = () => {
         <Text style={styles.screenText}>{status}</Text>
       </View>
       <View style={styles.buttonRow}>
+        <View style={styles.lightContainer}>
+          <View style={status === 'Recording...' ? styles.redLightOn : styles.redLightOff} />
+        </View>
         <TouchableOpacity style={styles.button} onPress={handleRecord}>
           <Icon name="fiber-manual-record" size={30} color="red" style={styles.icon} />
         </TouchableOpacity>
@@ -369,6 +372,31 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginTop: 10,
+  },
+  lightContainer: {
+    position: 'absolute',
+    top: -50,
+    left: 49,
+    transform: [{ translateX: -10 }],
+    width: 20,
+    height: 20,
+  },
+  redLightOff: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#8B0000',
+    shadowColor: 'transparent',
+  },
+  redLightOn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'red',
+    shadowColor: 'red',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
   },
 });
 
