@@ -11,6 +11,8 @@ const App = () => {
   const [sound, setSound] = useState(null);
   const [recordingUri, setRecordingUri] = useState(null);
   const [sliderValue, setSliderValue] = useState(0);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const recordingDurationRef = useRef(0);
   const rotation = useRef(new Animated.Value(0)).current;
   const [angleOffset, setAngleOffset] = useState(0);
   const currentVelocity = useRef(0);
@@ -22,15 +24,19 @@ const App = () => {
     onPanResponderGrant: () => {
       if (status === 'Recording...' || status === 'Playing...') {
         stopRotation();
+        handleStopRecording();
       }
     },
     onPanResponderMove: (e, gestureState) => {
       const newAngle = angleOffset + gestureState.dx / 2;
       rotation.setValue(newAngle);
     },
-    onPanResponderRelease: (e, gestureState) => {
+    onPanResponderRelease: async (e, gestureState) => {
       setAngleOffset(angleOffset + gestureState.dx / 2);
-      if (status === 'Recording...' || status === 'Playing...') {
+      if (status === 'Paused') {
+        await resumeRecording();
+        startRotation();
+      } else if (status === 'Playing...') {
         startRotation();
       }
     },
@@ -56,6 +62,19 @@ const App = () => {
   }, [sound]);
 
   useEffect(() => {
+    let intervalId;
+    if (status === 'Recording...') {
+      intervalId = setInterval(() => {
+        recordingDurationRef.current += 1;
+        setRecordingDuration(recordingDurationRef.current);
+      }, 1000);
+    } else {
+      clearInterval(intervalId);
+    }
+    return () => clearInterval(intervalId);
+  }, [status]);
+
+  useEffect(() => {
     if (status === 'Recording...' || status === 'Playing...') {
       startRotation();
     } else {
@@ -64,6 +83,7 @@ const App = () => {
   }, [status]);
 
   const startRotation = () => {
+    rotation.setValue(angleOffset); // Reset rotation value
     Animated.loop(
       Animated.timing(rotation, {
         toValue: angleOffset + 360,
@@ -103,11 +123,29 @@ const App = () => {
           Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
         );
         setRecording(recording);
+        recordingDurationRef.current = 0;
+        setRecordingDuration(0);
       } else {
         console.log('Permission to access microphone is required!');
       }
     } catch (error) {
       console.error('Failed to start recording', error);
+    }
+  };
+
+  const handleStopRecording = async () => {
+    if (recording) {
+      await recording.pauseAsync();
+      setStatus('Paused');
+    }
+  };
+
+  const resumeRecording = async () => {
+    try {
+      await recording.startAsync();
+      setStatus('Recording...');
+    } catch (error) {
+      console.error('Failed to resume recording', error);
     }
   };
 
@@ -196,7 +234,8 @@ const App = () => {
     onPanResponderMove: handleSlider,
     onPanResponderGrant: handleSlider,
     onPanResponderRelease: () => {
-      if (status === 'Recording...' || status === 'Playing...') {
+      if (status === 'Paused') {
+        resumeRecording();
         startRotation();
       }
       setSliderValue(0);
@@ -215,7 +254,7 @@ const App = () => {
         ]}
       >
         <LinearGradient
-          colors={['#d1d1d1', '#a7a7a7', '#c7c7c7']}
+          colors={['#d1d1d1', '#a7a7d7', '#c7c7d7']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.innerCircle}
@@ -236,7 +275,7 @@ const App = () => {
         </View>
       </View>
       <View style={styles.screen}>
-        <Text style={styles.screenText}>{status}</Text>
+        <Text style={styles.screenText}>{status} {recordingDuration}s</Text>
       </View>
       <View style={styles.buttonRow}>
         <View style={styles.lightContainer}>
