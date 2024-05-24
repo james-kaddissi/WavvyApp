@@ -12,7 +12,9 @@ const App = () => {
   const [recordingUri, setRecordingUri] = useState(null);
   const [sliderValue, setSliderValue] = useState(0);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [playbackDuration, setPlaybackDuration] = useState(0);
   const recordingDurationRef = useRef(0);
+  const playbackDurationRef = useRef(0);
   const rotation = useRef(new Animated.Value(0)).current;
   const [angleOffset, setAngleOffset] = useState(0);
   const currentVelocity = useRef(0);
@@ -32,12 +34,13 @@ const App = () => {
       rotation.setValue(newAngle);
     },
     onPanResponderRelease: async (e, gestureState) => {
-      setAngleOffset(angleOffset + gestureState.dx / 2);
+      const newAngleOffset = angleOffset + gestureState.dx / 2;
+      setAngleOffset(newAngleOffset);
       if (status === 'Paused') {
         await resumeRecording();
-        startRotation();
+        startRotation(newAngleOffset);
       } else if (status === 'Playing...') {
-        startRotation();
+        startRotation(newAngleOffset);
       }
     },
   });
@@ -75,18 +78,31 @@ const App = () => {
   }, [status]);
 
   useEffect(() => {
+    let intervalId;
+    if (status === 'Playing...') {
+      intervalId = setInterval(() => {
+        playbackDurationRef.current += 1;
+        setPlaybackDuration(playbackDurationRef.current);
+      }, 1000);
+    } else {
+      clearInterval(intervalId);
+    }
+    return () => clearInterval(intervalId);
+  }, [status]);
+
+  useEffect(() => {
     if (status === 'Recording...' || status === 'Playing...') {
-      startRotation();
+      startRotation(angleOffset);
     } else {
       stopRotation();
     }
   }, [status]);
 
-  const startRotation = () => {
-    rotation.setValue(angleOffset); // Reset rotation value
+  const startRotation = (startingValue = angleOffset) => {
+    rotation.setValue(startingValue); // Set the starting value to the provided starting value
     Animated.loop(
       Animated.timing(rotation, {
-        toValue: angleOffset + 360,
+        toValue: startingValue + 360,
         duration: 6000,
         easing: Easing.linear,
         useNativeDriver: true,
@@ -195,6 +211,8 @@ const App = () => {
         }
       );
       setSound(newSound);
+      playbackDurationRef.current = 0;
+      setPlaybackDuration(0);
       await newSound.playAsync();
     } else {
       console.log('No recording available to play');
@@ -236,11 +254,17 @@ const App = () => {
     onPanResponderRelease: () => {
       if (status === 'Paused') {
         resumeRecording();
-        startRotation();
+        startRotation(angleOffset);
       }
       setSliderValue(0);
     },
   });
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <View style={styles.container}>
@@ -254,7 +278,7 @@ const App = () => {
         ]}
       >
         <LinearGradient
-          colors={['#d1d1d1', '#a7a7d7', '#c7c7d7']}
+          colors={['#d1d1d1', '#a7a7a7', '#c7c7c7']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.innerCircle}
@@ -275,7 +299,8 @@ const App = () => {
         </View>
       </View>
       <View style={styles.screen}>
-        <Text style={styles.screenText}>{status} {recordingDuration}s</Text>
+        {status === 'Recording...' && <Text style={styles.screenText}>{formatTime(recordingDuration)}</Text>}
+        {status === 'Playing...' && <Text style={styles.screenText}>{formatTime(playbackDuration)}</Text>}
       </View>
       <View style={styles.buttonRow}>
         <View style={styles.lightContainer}>
