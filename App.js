@@ -19,31 +19,53 @@ const App = () => {
   const [angleOffset, setAngleOffset] = useState(0);
   const currentVelocity = useRef(0);
 
+  const playbackPositionRef = useRef(0);
+
   const sliderHeight = 300;
 
-  const panResponder = PanResponder.create({
+    const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: () => {
-      if (status === 'Recording...' || status === 'Playing...') {
+      if (status === 'Recording...') {
         stopRotation();
         handleStopRecording();
+      } else if (status === 'Playing...') {
+        stopRotation(); 
+        sound.pauseAsync();
       }
+      
+      const currentRotation = rotation._value;
+      setAngleOffset(currentRotation); 
     },
     onPanResponderMove: (e, gestureState) => {
       const newAngle = angleOffset + gestureState.dx / 2;
-      rotation.setValue(newAngle);
+
+      if (status === 'Playing...') {
+        const playbackChange = gestureState.dx / 100;
+        const newPosition = playbackPositionRef.current + playbackChange;
+        const clampedPosition = Math.max(0, Math.min(newPosition, recordingDurationRef.current));
+        playbackPositionRef.current = clampedPosition;
+        setPlaybackDuration(clampedPosition);
+
+        sound.setPositionAsync(clampedPosition * 1000);
+      } else {
+        rotation.setValue(newAngle);  
+      }
     },
     onPanResponderRelease: async (e, gestureState) => {
       const newAngleOffset = angleOffset + gestureState.dx / 2;
       setAngleOffset(newAngleOffset);
+
       if (status === 'Paused') {
         await resumeRecording();
         startRotation(newAngleOffset);
       } else if (status === 'Playing...') {
-        startRotation(newAngleOffset);
+        sound.playAsync();
+        startRotation(newAngleOffset); 
       }
     },
   });
+
 
   useEffect(() => {
     if (status === 'Stopped') {
@@ -99,7 +121,7 @@ const App = () => {
   }, [status]);
 
   const startRotation = (startingValue = angleOffset) => {
-    rotation.setValue(startingValue); // Set the starting value to the provided starting value
+    rotation.setValue(startingValue);
     Animated.loop(
       Animated.timing(rotation, {
         toValue: startingValue + 360,
@@ -207,6 +229,9 @@ const App = () => {
         (status) => {
           if (status.didJustFinish) {
             setStatus('Idle');
+          } else {
+            playbackPositionRef.current = status.positionMillis / 1000;
+            setPlaybackDuration(playbackPositionRef.current);
           }
         }
       );
@@ -261,8 +286,9 @@ const App = () => {
   });
 
   const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
+    const roundedSeconds = Math.round(seconds); 
+    const minutes = Math.floor(roundedSeconds / 60);
+    const remainingSeconds = roundedSeconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
