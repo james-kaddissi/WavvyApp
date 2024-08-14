@@ -1,11 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, PanResponder, Animated, Easing, Dimensions } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  PanResponder,
+  Animated,
+  Easing,
+  Dimensions,
+} from "react-native";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import { LinearGradient } from "expo-linear-gradient";
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
 
 const App = () => {
-  const [status, setStatus] = useState('Idle');
+  const [status, setStatus] = useState("Idle");
   const [timeoutId, setTimeoutId] = useState(null);
   const [recording, setRecording] = useState(null);
   const [sound, setSound] = useState(null);
@@ -19,58 +28,63 @@ const App = () => {
   const [angleOffset, setAngleOffset] = useState(0);
   const currentVelocity = useRef(0);
 
+  const [volume, setVolume] = useState(0);
+  const volumeRef = useRef(new Animated.Value(0)).current;
+
   const playbackPositionRef = useRef(0);
 
   const sliderHeight = 300;
 
-    const panResponder = PanResponder.create({
+  const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: () => {
-      if (status === 'Recording...') {
+      if (status === "Recording...") {
         stopRotation();
         handleStopRecording();
-      } else if (status === 'Playing...') {
-        stopRotation(); 
+      } else if (status === "Playing...") {
+        stopRotation();
         sound.pauseAsync();
       }
-      
+
       const currentRotation = rotation._value;
-      setAngleOffset(currentRotation); 
+      setAngleOffset(currentRotation);
     },
     onPanResponderMove: (e, gestureState) => {
       const newAngle = angleOffset + gestureState.dx / 2;
 
-      if (status === 'Playing...') {
+      if (status === "Playing...") {
         const playbackChange = gestureState.dx / 100;
         const newPosition = playbackPositionRef.current + playbackChange;
-        const clampedPosition = Math.max(0, Math.min(newPosition, recordingDurationRef.current));
+        const clampedPosition = Math.max(
+          0,
+          Math.min(newPosition, recordingDurationRef.current)
+        );
         playbackPositionRef.current = clampedPosition;
         setPlaybackDuration(clampedPosition);
 
         sound.setPositionAsync(clampedPosition * 1000);
       } else {
-        rotation.setValue(newAngle);  
+        rotation.setValue(newAngle);
       }
     },
     onPanResponderRelease: async (e, gestureState) => {
       const newAngleOffset = angleOffset + gestureState.dx / 2;
       setAngleOffset(newAngleOffset);
 
-      if (status === 'Paused') {
+      if (status === "Paused") {
         await resumeRecording();
         startRotation(newAngleOffset);
-      } else if (status === 'Playing...') {
+      } else if (status === "Playing...") {
         sound.playAsync();
-        startRotation(newAngleOffset); 
+        startRotation(newAngleOffset);
       }
     },
   });
 
-
   useEffect(() => {
-    if (status === 'Stopped') {
+    if (status === "Stopped") {
       const id = setTimeout(() => {
-        setStatus('Idle');
+        setStatus("Idle");
       }, 10000);
       setTimeoutId(id);
     } else if (timeoutId) {
@@ -88,7 +102,7 @@ const App = () => {
 
   useEffect(() => {
     let intervalId;
-    if (status === 'Recording...') {
+    if (status === "Recording...") {
       intervalId = setInterval(() => {
         recordingDurationRef.current += 1;
         setRecordingDuration(recordingDurationRef.current);
@@ -101,7 +115,7 @@ const App = () => {
 
   useEffect(() => {
     let intervalId;
-    if (status === 'Playing...') {
+    if (status === "Playing...") {
       intervalId = setInterval(() => {
         playbackDurationRef.current += 1;
         setPlaybackDuration(playbackDurationRef.current);
@@ -113,7 +127,7 @@ const App = () => {
   }, [status]);
 
   useEffect(() => {
-    if (status === 'Recording...' || status === 'Playing...') {
+    if (status === "Recording..." || status === "Playing...") {
       startRotation(angleOffset);
     } else {
       stopRotation();
@@ -139,13 +153,13 @@ const App = () => {
   };
 
   const handleRecord = async () => {
-    if (status === 'Playing...') {
+    if (status === "Playing...") {
       await handleStop();
     }
 
     try {
       const permission = await Audio.requestPermissionsAsync();
-      if (permission.status === 'granted') {
+      if (permission.status === "granted") {
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: true,
           interruptionModeIOS: InterruptionModeIOS.DoNotMix,
@@ -156,7 +170,7 @@ const App = () => {
           playThroughEarpieceAndroid: true,
         });
 
-        setStatus('Recording...');
+        setStatus("Recording...");
         const { recording } = await Audio.Recording.createAsync(
           Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
         );
@@ -164,26 +178,26 @@ const App = () => {
         recordingDurationRef.current = 0;
         setRecordingDuration(0);
       } else {
-        console.log('Permission to access microphone is required!');
+        console.log("Permission to access microphone is required!");
       }
     } catch (error) {
-      console.error('Failed to start recording', error);
+      console.error("Failed to start recording", error);
     }
   };
 
   const handleStopRecording = async () => {
     if (recording) {
       await recording.pauseAsync();
-      setStatus('Paused');
+      setStatus("Paused");
     }
   };
 
   const resumeRecording = async () => {
     try {
       await recording.startAsync();
-      setStatus('Recording...');
+      setStatus("Recording...");
     } catch (error) {
-      console.error('Failed to resume recording', error);
+      console.error("Failed to resume recording", error);
     }
   };
 
@@ -191,19 +205,19 @@ const App = () => {
     if (recording) {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
-      console.log('Recording saved at', uri);
-      setStatus('Stopped');
+      console.log("Recording saved at", uri);
+      setStatus("Stopped");
       setRecordingUri(uri);
       setRecording(null);
       return uri;
     }
-    if (status === 'Playing...') {
+    if (status === "Playing...") {
       if (sound) {
         await sound.stopAsync();
         await sound.unloadAsync();
         setSound(null);
       }
-      setStatus('Stopped');
+      setStatus("Stopped");
       return recordingUri;
     }
     return null;
@@ -212,13 +226,13 @@ const App = () => {
   const handlePlay = async () => {
     let uri = recordingUri;
 
-    if (status === 'Recording...') {
-      setStatus('Stopping...');
+    if (status === "Recording...") {
+      setStatus("Stopping...");
       uri = await handleStop();
     }
 
     if (uri) {
-      setStatus('Playing...');
+      setStatus("Playing...");
       if (sound) {
         await sound.unloadAsync();
         setSound(null);
@@ -228,10 +242,18 @@ const App = () => {
         { shouldPlay: true },
         (status) => {
           if (status.didJustFinish) {
-            setStatus('Idle');
+            setStatus("Idle");
           } else {
             playbackPositionRef.current = status.positionMillis / 1000;
             setPlaybackDuration(playbackPositionRef.current);
+
+            const simulatedVolume = Math.random(); 
+            setVolume(simulatedVolume);
+            Animated.timing(volumeRef, {
+              toValue: simulatedVolume,
+              duration: 300,
+              useNativeDriver: false,
+            }).start();
           }
         }
       );
@@ -240,12 +262,13 @@ const App = () => {
       setPlaybackDuration(0);
       await newSound.playAsync();
     } else {
-      console.log('No recording available to play');
+      console.log("No recording available to play");
     }
   };
 
   const handleSlider = (e, gestureState) => {
-    const positionY = gestureState.moveY - (Dimensions.get('window').height - sliderHeight) / 2;
+    const positionY =
+      gestureState.moveY - (Dimensions.get("window").height - sliderHeight) / 2;
     const value = 1 - (2 * positionY) / sliderHeight;
     setSliderValue(Math.max(-1, Math.min(1, value)));
   };
@@ -253,7 +276,7 @@ const App = () => {
   useEffect(() => {
     let animationFrame;
     const updateRotation = () => {
-      currentVelocity.current += sliderValue * 0.055; 
+      currentVelocity.current += sliderValue * 0.055;
       rotation.setValue(currentVelocity.current * 360);
       animationFrame = requestAnimationFrame(updateRotation);
     };
@@ -269,7 +292,7 @@ const App = () => {
 
   const combinedRotation = rotation.interpolate({
     inputRange: [-360, 360],
-    outputRange: ['-360deg', '360deg'],
+    outputRange: ["-360deg", "360deg"],
   });
 
   const sliderResponder = PanResponder.create({
@@ -277,7 +300,7 @@ const App = () => {
     onPanResponderMove: handleSlider,
     onPanResponderGrant: handleSlider,
     onPanResponderRelease: () => {
-      if (status === 'Paused') {
+      if (status === "Paused") {
         resumeRecording();
         startRotation(angleOffset);
       }
@@ -286,11 +309,18 @@ const App = () => {
   });
 
   const formatTime = (seconds) => {
-    const roundedSeconds = Math.round(seconds); 
+    const roundedSeconds = Math.round(seconds);
     const minutes = Math.floor(roundedSeconds / 60);
     const remainingSeconds = roundedSeconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
   };
+
+  const dBIndicatorHeight = volumeRef.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 152],
+  });
 
   return (
     <View style={styles.container}>
@@ -304,7 +334,7 @@ const App = () => {
         ]}
       >
         <LinearGradient
-          colors={['#d1d1d1', '#a7a7a7', '#c7c7c7']}
+          colors={["#d1d1d1", "#a7a7a7", "#c7c7c7"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.innerCircle}
@@ -316,7 +346,12 @@ const App = () => {
         <View style={styles.sidebar} {...sliderResponder.panHandlers}>
           <View style={styles.symbolTop}>
             <Icon name="play-arrow" size={20} color="white" />
-            <Icon name="play-arrow" size={20} color="white" style={{ marginLeft: -10 }} />
+            <Icon
+              name="play-arrow"
+              size={20}
+              color="white"
+              style={{ marginLeft: -10 }}
+            />
           </View>
           <View style={styles.symbolBottom}>
             <Icon name="play-arrow" size={20} color="white" />
@@ -325,22 +360,47 @@ const App = () => {
         </View>
       </View>
       <View style={styles.screen}>
-        {status === 'Recording...' && <Text style={styles.screenText}>{formatTime(recordingDuration)}</Text>}
-        {status === 'Playing...' && <Text style={styles.screenText}>{formatTime(playbackDuration)}</Text>}
+        {status === "Recording..." && (
+          <Text style={styles.screenText}>{formatTime(recordingDuration)}</Text>
+        )}
+        {status === "Playing..." && (
+          <Text style={styles.screenText}>{formatTime(playbackDuration)}</Text>
+        )}
       </View>
       <View style={styles.buttonRow}>
         <View style={styles.lightContainer}>
-          <View style={status === 'Recording...' ? styles.redLightOn : styles.redLightOff} />
+          <View
+            style={
+              status === "Recording..." ? styles.redLightOn : styles.redLightOff
+            }
+          />
         </View>
         <TouchableOpacity style={styles.button} onPress={handleRecord}>
-          <Icon name="fiber-manual-record" size={30} color="red" style={styles.icon} />
+          <Icon
+            name="fiber-manual-record"
+            size={30}
+            color="red"
+            style={styles.icon}
+          />
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={handlePlay}>
           <Icon name="play-arrow" size={30} color="black" style={styles.icon} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleStop} disabled={status === 'Idle' || status === 'Stopped'}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleStop}
+          disabled={status === "Idle" || status === "Stopped"}
+        >
           <Icon name="stop" size={30} color="black" style={styles.icon} />
         </TouchableOpacity>
+      </View>
+      <View style={styles.dbIndicatorWrapper}>
+        <Animated.View
+          style={[
+            styles.dbIndicator,
+            { height: dBIndicatorHeight }
+          ]}
+        />
       </View>
     </View>
   );
@@ -349,18 +409,34 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#C7C7C7',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#C7C7C7",
+  },
+  dbIndicatorWrapper: {
+    position: 'absolute',
+    bottom: 20,
+    right: 40,
+    width: 18,
+    height: 160,
+    backgroundColor: 'black',
+    borderRadius: 5,
+  },
+  dbIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    width: 10,
+    backgroundColor: 'green',
   },
   wheel: {
     width: 350,
     height: 350,
     borderRadius: 175,
     borderWidth: 0.5,
-    borderColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 50,
   },
   innerCircle: {
@@ -369,102 +445,102 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   line: {
-    position: 'absolute',
+    position: "absolute",
     width: 1,
     height: 115,
-    backgroundColor: 'gray',
+    backgroundColor: "gray",
   },
   line1: {
     top: 5,
-    transform: [{ rotate: '0deg' }],
+    transform: [{ rotate: "0deg" }],
   },
   line2: {
     bottom: 5,
-    transform: [{ rotate: '180deg' }],
+    transform: [{ rotate: "180deg" }],
   },
   sidebarContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 100,
     width: 15,
     height: 300,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#C7C7C7',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#C7C7C7",
   },
   sidebar: {
-    width: '100%',
+    width: "100%",
     top: 150,
-    height: '100%',
-    backgroundColor: '#C7C7C7',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    height: "100%",
+    backgroundColor: "#C7C7C7",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderWidth: 0.5,
-    borderColor: '#000',
+    borderColor: "#000",
     borderRadius: 5,
     paddingVertical: 10,
   },
   symbolTop: {
-    flexDirection: 'row',
-    position: 'absolute',
+    flexDirection: "row",
+    position: "absolute",
     left: 20,
-    transform: [{ rotate: '270deg' }]
+    transform: [{ rotate: "270deg" }],
   },
   symbolBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'absolute',
+    flexDirection: "row",
+    alignItems: "center",
+    position: "absolute",
     left: 20,
     bottom: 0,
-    transform: [{ rotate: '90deg' }],
+    transform: [{ rotate: "90deg" }],
   },
   reverseText: {
-    color: 'white',
+    color: "white",
     fontSize: 15,
     marginRight: 5,
-    transform: [{ rotate: '180deg' }],
+    transform: [{ rotate: "180deg" }],
   },
   screen: {
-    position: 'absolute',
+    position: "absolute",
     top: 100,
     right: 30,
     width: 140,
     height: 80,
     borderRadius: 10,
-    backgroundColor: 'black',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "black",
+    justifyContent: "center",
+    alignItems: "center",
   },
   screenText: {
-    color: 'white',
-    fontFamily: 'Courier',
+    color: "white",
+    fontFamily: "Courier",
     fontSize: 14,
   },
   buttonRow: {
-    flexDirection: 'row',
-    position: 'absolute',
+    flexDirection: "row",
+    position: "absolute",
     bottom: 0,
     left: 0,
-    width: '75%',
+    width: "75%",
     height: 200,
   },
   button: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#000',
+    borderColor: "#000",
     borderRadius: 5,
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    alignItems: "center",
+    justifyContent: "flex-start",
     paddingTop: 10,
-    height: '100%',
+    height: "100%",
   },
   icon: {
     marginTop: 10,
   },
   lightContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: -50,
     left: 49,
     transform: [{ translateX: -10 }],
@@ -475,15 +551,15 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#8B0000',
-    shadowColor: 'transparent',
+    backgroundColor: "#8B0000",
+    shadowColor: "transparent",
   },
   redLightOn: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: 'red',
-    shadowColor: 'red',
+    backgroundColor: "red",
+    shadowColor: "red",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 6,
